@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Safety Analyzer</title>
+    <style>
+        #loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        #loading img {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+        }
+        .result-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .result-item a {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Safety Analyzer</h1>
+    <form id="searchForm">
+        <input type="text" id="query" name="query" placeholder="Enter search keyword" required>
+        <button type="submit">Analyze</button>
+    </form>
+    <div id="results">
+        <div id="loading" style="display: none;">
+            <img src="loading_spinner.gif" alt="Loading..."> Loading...
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const query = document.getElementById('query').value;
+
+            // Encode the query for URL safety
+            const encodedQuery = encodeURIComponent(query);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded', // Correct content type
+                    },
+                    // Use the encoded query in the body
+                    body: `query=${encodedQuery}`, 
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = ''; // Clear previous results
+
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = '<p>No results found.</p>';
+                } else {
+                    const ul = document.createElement('ul');
+                    data.results.forEach((result) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <a href="${result.url}" target="_blank">${result.url}</a> (${result.domain})<br>
+                            Safety Score: ${result.safety_score}, Rating: ${result.rating}<br>
+                            Bad Word Count: ${result.bad_word_count}, Total Word Count: ${result.total_word_count}<br>
+                            Category Analysis: ${JSON.stringify(result.category_analysis)}
+                        `;
+                        ul.appendChild(li);
+                    });
+                    resultsDiv.appendChild(ul);
+                }
+            } catch (error) {
+                console.error("Error during analysis:", error);
+                document.getElementById('results').innerHTML = `<p>An error occurred: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
